@@ -1,0 +1,54 @@
+name: Free Windows RDP
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 360 # সর্বোচ্চ ৬ ঘণ্টা পর্যন্ত চালু থাকবে
+
+    steps:
+    - name: 1. Displaying System Info
+      run: |
+        Write-Host "Setting up Windows RDP for Sahadat..."
+
+    - name: 2. Enabling RDP in Windows Registry
+      run: |
+        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
+        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 1
+        Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+        Write-Host "RDP Enabled successfully!"
+
+    - name: 3. Setting Up RDP User Password
+      run: |
+        $user = "Sahadat"
+        $pass = "Sahadat123"
+        net user $user $pass /add
+        net localgroup administrators $user /add
+        Write-Host "User and password configured successfully!"
+
+    - name: 4. Downloading and Configuring Ngrok
+      run: |
+        Invoke-WebRequest -Uri "https://bin.equinox.io/c/4VmDzA7iaHb/ngrok-stable-windows-amd64.zip" -OutFile "ngrok.zip"
+        Expand-Archive ngrok.zip -DestinationPath .
+        ./ngrok authtoken ${{ secrets.NGROK_AUTH_TOKEN }}
+        Start-Process ./ngrok -ArgumentList "tcp 3389"
+        Start-Sleep -Seconds 5
+
+    - name: 5. Getting Ngrok TCP Address
+      run: |
+        $response = Invoke-RestMethod -Uri "http://localhost:4040/api/tunnels"
+        $tcpUrl = $response.tunnels[0].public_url
+        Write-Host "=========================================="
+        Write-Host "RDP Connection Address: $tcpUrl" -ForegroundColor Green
+        Write-Host "Username: Sahadat" -ForegroundColor Yellow
+        Write-Host "Password: Sahadat123" -ForegroundColor Yellow
+        Write-Host "=========================================="
+
+    - name: 6. Keeping Session Alive
+      run: |
+        Write-Host "RDP is running. Do not close this workflow tab!"
+        for ($i = 0; $i -lt 360; $i++) {
+            Start-Sleep -Seconds 60
+        }
