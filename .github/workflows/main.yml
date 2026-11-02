@@ -48,7 +48,7 @@ jobs:
                 $tcpUrl = $response.tunnels[0].public_url
                 if ($tcpUrl) { break }
             } catch {
-                Write-Host "Attempt $i/$maxRetries: Ngrok API not ready yet, waiting..."
+                Write-Host "Attempt $i of $maxRetries: Ngrok API not ready yet, waiting..."
                 Start-Sleep -Seconds $retryDelay
             }
         }
